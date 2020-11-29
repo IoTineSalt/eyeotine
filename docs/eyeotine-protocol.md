@@ -2,7 +2,7 @@
 
 ## Header
 - Version (2 bits, bitmask 0xc0) = 0
-- Packet Type (2 bit, bitmask 0x30)/Subtype (4 bits, bitmask 0x0f) 
+- Packet Type (2 bit, bitmask 0x30)/Subtype (4 bits, bitmask 0x0f)
 
 ## Packet Types
 
@@ -31,3 +31,7 @@
 - Timestamp/Millisecs since Sync mod 1024 (10 bit, bitmask 0xffc0)
 - Fragment Number (6 bit, bitmask 0x3f)
 - (raw data) (0..2200 byte)
+
+
+## Behavior Specification
+![ESP state machine](img/esp_state_machine.png)
