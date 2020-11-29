@@ -37,7 +37,7 @@ Version of this specification: **Draft-1.0**
 
 ## Behavior Specification
 ### Client state machine
-The client state machine shall be implemented as follows:
+The client state machine shall be implemented as follows:  
 ![ESP state machine](img/esp_state_machine.png)
 
 #### General
@@ -89,7 +89,7 @@ In this state, the client may receive the following packet types:
 - Control
 
 ### Server state machine
-The server state machine *for each connection* should be implemented as illustrated:
+The server state machine *for each connection* should be implemented as illustrated:  
 ![Server state machine](img/server_state_machine.png)
 
 #### General
