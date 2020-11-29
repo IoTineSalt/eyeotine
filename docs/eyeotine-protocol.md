@@ -35,3 +35,5 @@
 
 ## Behavior Specification
 ![ESP state machine](img/esp_state_machine.png)
+
+![Server state machine](img/server_state_machine.png)
