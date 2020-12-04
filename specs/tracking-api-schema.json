@@ -1,0 +1,122 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "type": "object",
+    "title": "The root schema",
+    "description": "Tracking API",
+    "required": [
+        "timestamp",
+        "data"
+    ],
+    "properties": {
+        "timestamp": {
+            "$id": "#/properties/timestamp",
+            "type": "number",
+            "title": "The timestamp schema",
+            "description": "Unix timestamp with millisecond precision",
+            "examples": [
+                1607117116.200
+            ]
+        },
+        "data": {
+            "$id": "#/properties/data",
+            "type": "array",
+            "title": "The data schema",
+            "description": "Data contains an object per detected person",
+            "additionalItems": true,
+            "items": {
+                "$id": "#/properties/data/items",
+                "anyOf": [
+                    {
+                        "$id": "#/properties/data/items/anyOf/0",
+                        "type": "object",
+                        "title": "The first anyOf schema",
+                        "description": "Holds information for a tracked person",
+                        "required": [
+                            "id",
+                            "position",
+                            "variance"
+                        ],
+                        "properties": {
+                            "id": {
+                                "$id": "#/properties/timestamp",
+                                "type": "number",
+                                "title": "The timestamp schema",
+                                "description": "Unix timestamp with millisecond precision"
+                            },
+                            "position": {
+                                "$id": "#/properties/data/items/anyOf/0/properties/position",
+                                "type": "object",
+                                "title": "The position schema",
+                                "description": "An explanation about the purpose of this instance.",
+                                "required": [
+                                    "x",
+                                    "y"
+                                ],
+                                "properties": {
+                                    "x": {
+                                        "$id": "#/properties/data/items/anyOf/0/properties/position/properties/x",
+                                        "type": "number",
+                                        "title": "The x schema",
+                                        "description": "x coordinate"
+                                    },
+                                    "y": {
+                                        "$id": "#/properties/data/items/anyOf/0/properties/position/properties/y",
+                                        "type": "number",
+                                        "title": "The y schema",
+                                        "description": "y coordinate"
+                                    },
+                                    "z": {
+                                        "$id": "#/properties/data/items/anyOf/0/properties/position/properties/z",
+                                        "type": "number",
+                                        "title": "The z schema",
+                                        "description": "z coordinate (optional)"
+                                    }
+                                },
+                                "additionalProperties": true
+                            },
+                            "variance": {
+                                "$id": "#/properties/data/items/anyOf/0/properties/variance",
+                                "type": "array",
+                                "title": "The variance schema",
+                                "description": "Variance matrix",
+                                "additionalItems": true,
+                                "items": {
+                                    "$id": "#/properties/data/items/anyOf/0/properties/variance/items",
+                                    "anyOf": [
+                                        {
+                                            "$id": "#/properties/data/items/anyOf/0/properties/variance/items/anyOf/0",
+                                            "type": "array",
+                                            "title": "The first anyOf schema",
+                                            "description": "Variance matrix row",
+                                            "additionalItems": true,
+                                            "items": {
+                                                "$id": "#/properties/data/items/anyOf/0/properties/variance/items/anyOf/0/items",
+                                                "anyOf": [
+                                                    {
+                                                        "$id": "#/properties/data/items/anyOf/0/properties/variance/items/anyOf/0/items/anyOf/0",
+                                                        "type": "number",
+                                                        "title": "The first anyOf schema",
+                                                        "description": "Variance matrix entry"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            },
+                            "metadata": {
+                                "$id": "#/properties/data/items/anyOf/0/properties/metadata",
+                                "type": "object",
+                                "title": "The metadata schema",
+                                "description": "Optional metadata containing information eg. about the detection quality",
+                                "additionalProperties": true
+                            }
+                        },
+                        "additionalProperties": true
+                    }
+                ]
+            }
+        }
+    },
+    "additionalProperties": true
+}
