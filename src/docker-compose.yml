@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  broker:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./broker/data:/data
+      - ./broker/log:/log
+      - ./broker/config:/config
