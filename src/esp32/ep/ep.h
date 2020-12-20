@@ -1,10 +1,15 @@
 #ifndef EYEOTINE_EP_H
 #define EYEOTINE_EP_H
 
+// Is this also available when building for ESP32?
+#include <stdint.h>
+#include <stdbool.h>
+#include <unistd.h>
+
 struct ep_header {
     uint8_t ver_type_subtype;
     uint8_t payload[0];
-};
+}; // todo Does the ESP compiler need __attribute__((packed)) here?
 
 #define EP_GET_VERSION(packet) ((packet->ver_type_subtype & 0xC0) >> 6)
 #define EP_GET_TYPE(packet) ((packet->ver_type_subtype & 0x30) >> 4)
@@ -65,5 +70,21 @@ struct ep_data_image {
 
 #define EP_SET_DATA_TIMESTAMP(packet, val) packet->ver_type_subtype = (packet->ver_type_subtype & 0x003F) | ((val & 0x03FF) << 6)
 #define EP_SET_DATA_FRAGMENT_NO(packet, val) packet->ver_type_subtype = (packet->ver_type_subtype & 0xFFC0) | (val & 0x003F)
+
+// API Functions
+
+enum ep_state {
+    STOPPED, IDLE, ASSOCIATING, WAIT_FOR_SYNC, CAMERA_OFF, CAMERA_ON
+};
+
+void ep_init();
+void ep_start();
+void ep_stop();
+void ep_set_connect_cb(void (*on_connect)());
+void ep_set_disconnect_cb(void (*on_disconnect)());
+void ep_set_recv_config_cb(void (*on_recv_config)(void *config, size_t len));
+void ep_set_recv_restart_cb(void (*on_recv_restart)());
+
+
 
 #endif //EYEOTINE_EP_H
