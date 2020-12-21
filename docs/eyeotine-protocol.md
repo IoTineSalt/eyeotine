@@ -52,7 +52,7 @@ Idle describes the state in which the client is trying to connect to a server.
 
 In this state, the client may send the following packet types:
 - Association Request
-All incoming packets should be discarded.
+All incoming packets except for a response should be discarded.
 
 #### Wait for Sync
 In Wait for Sync, the client waits for a Sync Control Packet.
