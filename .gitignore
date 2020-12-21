@@ -1,0 +1,4 @@
+
+src/broker/data/mosquitto.db
+
+src/broker/log/mosquitto.log
