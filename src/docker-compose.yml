@@ -2,6 +2,7 @@ version: "3.8"
 services:
   broker:
     image: eclipse-mosquitto:latest
+    user: "1000:1000"
     ports:
       - "1883:1883"
     volumes:
