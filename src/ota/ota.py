@@ -16,7 +16,7 @@ client = Client()
 client.connect(args.host, args.port, 60)
 client.loop_start()
 with open(args.filename, 'rb') as file:
-    data = f.read()
+    data = file.read()
     return_value = client.publish(args.topic, data, qos=2)
     if return_value[1] != 1:
         exit(-1)
