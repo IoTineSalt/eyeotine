@@ -7,4 +7,4 @@ services:
     volumes:
       - ./broker/data:/mosquitto/data
       - ./broker/log:/mosquitto/log
-      - ./broker/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./broker/config:/mosquitto/config
