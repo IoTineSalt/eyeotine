@@ -14,6 +14,6 @@ json_string = json.dumps(data)
 for i in range(10):
     data = {"user": "test", "data":{"text":"Good morning", "day":"Friday" + str(i)}}
     json_string = json.dumps(data)
-    print(client.publish("visualisation", json_string, qos=2))
+    print(client.publish("ota", json_string, qos=2))
 client.loop_stop()
 client.disconnect()

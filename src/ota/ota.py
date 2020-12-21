@@ -20,3 +20,5 @@ with open(args.filename, 'rb') as file:
     return_value = client.publish(args.topic, data, qos=2)
     if return_value[1] != 1:
         exit(-1)
+client.loop_stop()
+client.disconnect()

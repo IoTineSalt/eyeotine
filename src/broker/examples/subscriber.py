@@ -9,7 +9,7 @@ client.on_message = on_message
 
 
 client.connect("localhost", 1883, 60)
-result_code = client.subscribe("visualisation", qos=2)
+result_code = client.subscribe("ota", qos=2)
 print(result_code)
 # Blocking call that processes network traffic, dispatches callbacks and
 # handles reconnecting.
