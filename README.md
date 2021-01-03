@@ -1,7 +1,7 @@
 # Eyeotine
 
 Eyeotine is a project, in which multiple ESP32 microcontroller with camera modules are used to track the location of people in a room.
-The ESP32 
+The ESP32s are connected to a central server which runs tracking algorithms and visualizes the resulting location(s).
 
 ## Usage
 
