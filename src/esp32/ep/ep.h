@@ -13,7 +13,9 @@
 //   2 - Warnings
 //   3 - Information
 //   4 - Debug
-#define EP_LOG_LEVEL 0
+#ifndef EP_LOG_LEVEL
+#define EP_LOG_LEVEL 4
+#endif
 
 struct ep_header {
     uint8_t ver_type_subtype;
@@ -86,7 +88,7 @@ enum ep_state {
     STOPPED, IDLE, ASSOCIATING, WAIT_FOR_SYNC, CAMERA_OFF, CAMERA_ON
 };
 
-void ep_init(int (*send_udp)(void *, size_t), uint16_t (*milliclk)());
+void ep_init(int (*send_udp)(void *, size_t), uint16_t (*milliclk)(), void (*log)(char *msg));
 void ep_start();
 void ep_stop();
 void ep_recv_udp(void *buf, size_t len);
