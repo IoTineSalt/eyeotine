@@ -46,6 +46,10 @@ void stop(int signum) {
     exit(0);
 }
 
+void reassociate() {
+    ep_associate();
+}
+
 int main(void) {
 
     struct sigaction s = {
@@ -80,7 +84,7 @@ int main(void) {
 
     struct timeval tv = {
         .tv_sec = 0,
-        .tv_usec = 1000
+        .tv_usec = 10000
     };
 
     if (setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval)) < 0) {
@@ -92,6 +96,8 @@ int main(void) {
     inet_aton("127.0.0.1", &(sa_partner.sin_addr));
 
     ep_init(send_udp, milliclk, logger);
+    // On disconnect instantly try to find a new connection
+    ep_set_disconnect_cb(reassociate);
 
 #define BUFLEN 4000
     void *buf = malloc(BUFLEN);
@@ -102,9 +108,11 @@ int main(void) {
     }
 
     ep_start();
+    ep_associate();
 
     ssize_t n;
     while (1) {
+        ep_loop();
         n = recvfrom(sock, buf, BUFLEN, 0, (struct sockaddr *) &sa_partner, &sa_partner_len);
         if (n < 0) {
             if (errno == EWOULDBLOCK) {

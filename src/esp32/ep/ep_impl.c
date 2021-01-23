@@ -3,6 +3,7 @@
 #if EP_LOG_LEVEL > 0
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #endif
 
@@ -45,16 +46,19 @@ static void log_none(char *str);
 void ep_init(int (*send_udp)(void *buf, size_t len), uint16_t (*milliclk)(), void (*log)(char *msg)) {
     ep = (struct ep) {
         .state = STOPPED,
-        .time_last_tx = -1, // todo
-        .time_last_rx = -1, // todo
+        .time_last_tx = milliclk(),
+        .time_last_rx = milliclk(),
         .sync = -1,
-        .buffer = (void *) 0xDEADBEEF, // todo malloc 2300
+        .buffer = malloc(2300), // todo malloc 2300
         .milliclk = milliclk,
         .send_udp = send_udp,
         .log = log,
     };
 #if EP_LOG_LEVEL > 0
     if (!ep.log) ep.log = log_none;
+    if (ep.buffer == NULL) {
+        ep.log("[ERR]  can't allocate ep buffer");
+    }
 #endif
 #if EP_LOG_LEVEL >= 3
     ep.log("[INFO] ep initialized");
@@ -78,6 +82,58 @@ void ep_stop() {
     EP_SET_STATE(STOPPED);
 }
 
+void ep_loop() {
+#if EP_LOG_LEVEL >= 4
+    ep.log("[DBG]  ep_loop() called");
+#endif
+
+    uint16_t time = ep.milliclk();
+    if (ep.state == ASSOCIATING) {
+        // Send association requests every 5 seconds
+        if (time - ep.time_last_tx >= 5000) {
+            struct ep_mgmt_assoc *packet = (struct ep_mgmt_assoc *) ep.buffer;
+            struct ep_header *header = (struct ep_header *) packet;
+
+            EP_SET_VERSION(header, 0);
+            EP_SET_TYPE(header, EP_TYPE_MGMT);
+            EP_SET_SUBTYPE(header, EP_SUBTYPE_MGMT_ASSOC);
+
+            packet->flags = 0;
+
+            ep.send_udp(packet, sizeof(struct ep_mgmt_assoc));
+            ep.time_last_tx = time;
+#if EP_LOG_LEVEL >= 4
+            ep.log("[INFO] sending association request");
+#endif
+        }
+    } else if (ep.state == WAIT_FOR_SYNC || ep.state == CAMERA_ON || ep.state == CAMERA_OFF) {
+        // Send ping every second
+        if (time - ep.time_last_tx >= 1000) {
+            struct ep_mgmt_ping *packet = (struct ep_mgmt_ping *) ep.buffer;
+            struct ep_header *header = (struct ep_header *) packet;
+
+            EP_SET_VERSION(header, 0);
+            EP_SET_TYPE(header, EP_TYPE_MGMT);
+            EP_SET_SUBTYPE(header, EP_SUBTYPE_MGMT_PING);
+
+            ep.send_udp(packet, sizeof(struct ep_mgmt_ping));
+            ep.time_last_tx = time;
+#if EP_LOG_LEVEL >= 4
+            ep.log("[INFO] sending ping");
+#endif
+        }
+    }
+}
+
+void ep_associate() {
+#if EP_LOG_LEVEL >= 4
+    ep.log("[DBG]  ep_associate() called");
+#endif
+    if (ep.state == IDLE) {
+        EP_SET_STATE(ASSOCIATING);
+    }
+}
+
 void ep_recv_udp(void *buf, size_t len) {
 #if EP_LOG_LEVEL >= 4
     sprintf(ep.log_buffer, "[DBG]  ep_recv_udp(%p, %u) called", buf, len);
@@ -98,7 +154,7 @@ int ep_send_img(void *buf, size_t len) {
     sprintf(ep.log_buffer, "[INFO] new image to send (%u bytes)", len);
     ep.log(ep.log_buffer);
 #endif
-    // Careful, when decrementing len, since it is unsigned (!)
+
     size_t offset = 0;
     uint8_t frag_no = 0;
     uint16_t timestamp = (ep.milliclk() + 1024 - ep.sync) % 1024;
@@ -288,6 +344,7 @@ static bool recv(void *buf, size_t len) {
 #endif
     return false;
 }
+
 #undef EP_WARN_MISMATCH
 #undef EP_INFO_DISCARD
 

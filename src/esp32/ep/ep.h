@@ -88,16 +88,110 @@ enum ep_state {
     STOPPED, IDLE, ASSOCIATING, WAIT_FOR_SYNC, CAMERA_OFF, CAMERA_ON
 };
 
-void ep_init(int (*send_udp)(void *, size_t), uint16_t (*milliclk)(), void (*log)(char *msg));
-void ep_start();
-void ep_stop();
-void ep_recv_udp(void *buf, size_t len);
-int ep_send_img(void *buf, size_t len);
-void ep_set_connect_cb(void (*on_connect)());
-void ep_set_disconnect_cb(void (*on_disconnect)());
-void ep_set_recv_config_cb(void (*on_recv_config)(void *config, size_t len));
-void ep_set_recv_restart_cb(void (*on_recv_restart)());
+/*************************************************************************************//**
+ * Initialize the EP library.
+ *
+ * This function must be called prior to any other function calls.
+ * You can also call it, in case you want to reset the EP instance.
+ *
+ * @param send_udp A function that sends len bytes from buf via UDP to the EP server.
+ *                 It shall return 0 on success and a non-zero error code otherwise.
+ * @param milliclk A function that returns the current time in milliseconds. It doesn't
+ *                 need to be calibrated to a fixed reference time, but should not change
+ *                 the reference time at any point. The return type will require it to
+ *                 regularly overflow (every 65.536 seconds)
+ * @param log      A function that print its null-terminated argument to a logger. You
+ *                 can also set it to NULL to disable logging.
+ ****************************************************************************************/
+void ep_init(int (*send_udp)(void *buf, size_t len), uint16_t (*milliclk)(), void (*log)(char *msg));
 
+/********************************************************************//**
+ * Start the EP client
+ *
+ * The EP client will be set into IDLE state, if it is in STOPPED state
+ ***********************************************************************/
+void ep_start();
+
+/***********************************************************************//**
+ * Stop the EP client
+ *
+ * The EP client will be set forced into the STOPPED state. If a connection
+ * is active, the EP server will be notified of the disconnect.
+ **************************************************************************/
+void ep_stop();
+
+/***********************************************************************//**
+ * Poll client jobs
+ *
+ * The EP client has several time-based jobs that need to be executed in
+ * approximate intervals. A good interval to call this function would be
+ * between every 10 to 100 ms
+ **************************************************************************/
+void ep_loop();
+
+/***********************************************************************//**
+ * Try to associate to the server
+ *
+ * This function sets the EP instance to ASSOCIATING mode if is currently
+ * IDLE. It needs to be called after ep_start() or after a connection has
+ * been terminated to reconnect to the server.
+ *
+ * In ASSOCIATING mode, the client will send an association request every
+ * 5 seconds until it is stopped or gets an association response.
+ **************************************************************************/
+void ep_associate();
+
+/***********************************************************************//**
+ * Receive an EP packet
+ *
+ * If an EP packet is received on the corresponding UDP socket, the program
+ * shall call this function to let the library process it.
+ *
+ * @param buf Buffer containing the UDP payload
+ * @param len Length of the buffer
+ **************************************************************************/
+void ep_recv_udp(void *buf, size_t len);
+
+/********************************************************************//**
+ * Send an image to the EP server
+ *
+ * This functions sends the whole buffer in correctly sized fragments to
+ * the server.
+ *
+ * @param buf Buffer containing the image data
+ * @param len Length of the buffer
+ * @return 0 for success, otherwise a non-zero error code
+ ***********************************************************************/
+int ep_send_img(void *buf, size_t len);
+
+/************************************************//**
+ * Set a callback for a associating with the server
+ *
+ * @param on_connect Callback handler
+ ***************************************************/
+void ep_set_connect_cb(void (*on_connect)());
+
+/**************************************************************************//**
+ * Set a callback for the event, when either partner terminates the connection
+ *
+ * @param on_disconnect Callback handler
+ *****************************************************************************/
+void ep_set_disconnect_cb(void (*on_disconnect)());
+
+/*******************************************************************************//**
+ * Set a callback for the event, when a config frame is received
+ *
+ * @param on_recv_config Callback handler. Receives a buffer with the configuration
+ *                       and its length as parameters.
+ **********************************************************************************/
+void ep_set_recv_config_cb(void (*on_recv_config)(void *config, size_t len));
+
+/**************************************************************************//**
+ * Set a callback for an incoming restart frame
+ *
+ * @param on_recv_restart Callback handler
+ *****************************************************************************/
+void ep_set_recv_restart_cb(void (*on_recv_restart)());
 
 
 #endif //EYEOTINE_EP_H
