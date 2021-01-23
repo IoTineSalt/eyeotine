@@ -37,7 +37,6 @@ int send_udp(void *buf, size_t len) {
 
 void logger(char *s) {
     puts(s);
-    puts("\n");
 }
 
 void stop(int signum) {
