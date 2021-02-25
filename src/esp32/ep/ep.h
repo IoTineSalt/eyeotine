@@ -182,9 +182,10 @@ void ep_set_disconnect_cb(void (*on_disconnect)());
  * Set a callback for the event, when a config frame is received
  *
  * @param on_recv_config Callback handler. Receives a buffer with the configuration
- *                       and its length as parameters.
+ *                       and its length as parameters. Returns true, if the camera
+ *                       is activated, else false.
  **********************************************************************************/
-void ep_set_recv_config_cb(void (*on_recv_config)(void *config, size_t len));
+void ep_set_recv_config_cb(bool (*on_recv_config)(void *config, size_t len));
 
 /**************************************************************************//**
  * Set a callback for an incoming restart frame

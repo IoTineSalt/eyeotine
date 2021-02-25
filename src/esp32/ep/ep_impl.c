@@ -31,7 +31,7 @@ struct ep {
     // Callbacks
     void (*on_connect)();
     void (*on_disconnect)();
-    void (*on_recv_config)(void *, size_t);
+    bool (*on_recv_config)(void *, size_t);
     void (*on_recv_restart)();
 };
 
@@ -123,6 +123,7 @@ void ep_loop() {
 #endif
         }
     }
+    // todo auto-disconnect
 }
 
 void ep_associate() {
@@ -189,7 +190,7 @@ void ep_set_disconnect_cb(void (*on_disconnect)()) {
     ep.on_disconnect = on_disconnect;
 }
 
-void ep_set_recv_config_cb(void (*on_recv_config)(void *config, size_t len)) {
+void ep_set_recv_config_cb(bool (*on_recv_config)(void *config, size_t len)) {
 #if EP_LOG_LEVEL >= 4
     sprintf(ep.log_buffer, "[DBG]  ep_set_recv_config_cb(%p) called", on_recv_config);
     ep.log(ep.log_buffer);
@@ -311,8 +312,13 @@ static bool recv(void *buf, size_t len) {
             }
 
             struct ep_ctrl_config *cfg = (struct ep_ctrl_config *) buf;
-            if (ep.on_recv_config)
-                ep.on_recv_config(cfg->config, len - sizeof(struct ep_ctrl_config));
+            if (ep.on_recv_config) {
+                if (ep.on_recv_config(cfg->config, len - sizeof(struct ep_ctrl_config))) {
+                    EP_SET_STATE(CAMERA_ON);
+                } else {
+                    EP_SET_STATE(CAMERA_OFF);
+                }
+            }
 #if EP_LOG_LEVEL >= 2
             sprintf(ep.log_buffer, "[INFO] received config (%u bytes)", len - sizeof(struct ep_ctrl_config));
             ep.log(ep.log_buffer);
