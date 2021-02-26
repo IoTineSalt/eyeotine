@@ -1,20 +1,40 @@
-menu "Example Configuration"
+menu "Eyeotine Configuration"
 
-    config EXAMPLE_FIRMWARE_UPGRADE_URL
+    config OTA_UPGRADE_URL
         string "firmware upgrade url endpoint"
-        default "https://192.168.0.3:8070/hello-world.bin"
+        default "https://10.0.0.100/eyeotine.bin"
         help
-            URL of server which hosts the firmware
-            image.
+            URL of server which hosts the firmware image.
 
-    config EXAMPLE_FIRMWARE_UPGRADE_URL_FROM_STDIN
-        bool
-        default y if EXAMPLE_FIRMWARE_UPGRADE_URL = "FROM_STDIN"
-
-    config EXAMPLE_SKIP_COMMON_NAME_CHECK
+    config OTA_SKIP_COMMON_NAME_CHECK
         bool "Skip server certificate CN fieldcheck"
         default n
         help
             This allows you to skip the validation of OTA server certificate CN field.
+
+    config EYEOTINE_SERVER_IP
+        string "EP server IP"
+        default "10.0.0.2"
+        help
+            IP address of the host which runs the server-side implementation of the Eyeotine Protocol.
+
+    config EYEOTINE_SERVER_PORT
+        int "EP server port"
+        default 2021
+        help
+            Port on which the Eyeotine Protocol server is listening.
+
+    config EYEOTINE_WIFI_SSID
+        string "WiFi SSID"
+        default "IotineSalt"
+        help
+            SSID (network name) for the example to connect to.
+
+    config EYEOTINE_WIFI_PASSWORD
+        string "WiFi Password"
+        default "mypassword"
+        help
+            WiFi password (WPA or WPA2) for the example to use.
+            Can be left blank if the network has no security set.
 
 endmenu

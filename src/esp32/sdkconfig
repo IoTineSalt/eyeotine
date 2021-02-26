@@ -124,21 +124,15 @@ CONFIG_PARTITION_TABLE_MD5=y
 # end of Partition Table
 
 #
-# Example Connection Configuration
+# Eyeotine Configuration
 #
-CONFIG_EXAMPLE_CONNECT_WIFI=y
-CONFIG_EXAMPLE_WIFI_SSID="IotineSalt"
-CONFIG_EXAMPLE_WIFI_PASSWORD="iotine"
-# CONFIG_EXAMPLE_CONNECT_ETHERNET is not set
-# CONFIG_EXAMPLE_CONNECT_IPV6 is not set
-# end of Example Connection Configuration
-
-#
-# Example Configuration
-#
-CONFIG_EXAMPLE_FIRMWARE_UPGRADE_URL="https://eyeotine.local/firmware.bin"
-CONFIG_EXAMPLE_SKIP_COMMON_NAME_CHECK=y
-# end of Example Configuration
+CONFIG_OTA_UPGRADE_URL="https://10.0.0.100/eyeotine.bin"
+# CONFIG_OTA_SKIP_COMMON_NAME_CHECK is not set
+CONFIG_EYEOTINE_SERVER_IP="10.0.0.2"
+CONFIG_EYEOTINE_SERVER_PORT=2021
+CONFIG_EYEOTINE_WIFI_SSID="IotineSalt"
+CONFIG_EYEOTINE_WIFI_PASSWORD="mypassword"
+# end of Eyeotine Configuration
 
 #
 # Compiler options
