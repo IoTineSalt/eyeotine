@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <signal.h>
 #include <arpa/inet.h>
@@ -9,8 +10,7 @@
 
 int sock;
 struct sockaddr_in sa_partner = {
-    .sin_family = AF_INET,
-    .sin_port = 2021
+    .sin_family = AF_INET
 };
 socklen_t sa_partner_len = sizeof(struct sockaddr_in);
 
@@ -93,6 +93,7 @@ int main(void) {
     }
 
     inet_aton("127.0.0.1", &(sa_partner.sin_addr));
+    sa_partner.sin_port = htons(2021);
 
     ep_init(send_udp, milliclk, logger);
     // On disconnect instantly try to find a new connection

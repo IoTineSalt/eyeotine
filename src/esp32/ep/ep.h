@@ -14,7 +14,7 @@
 //   3 - Information
 //   4 - Debug
 #ifndef EP_LOG_LEVEL
-#define EP_LOG_LEVEL 4
+#define EP_LOG_LEVEL 3
 #endif
 
 struct ep_header {

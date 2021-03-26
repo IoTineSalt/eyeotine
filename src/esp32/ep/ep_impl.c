@@ -15,8 +15,8 @@
 
 struct ep {
     enum ep_state state;
-    int time_last_tx;
-    int time_last_rx;
+    uint16_t time_last_tx;
+    uint16_t time_last_rx;
     void *buffer;
     int sync;
 #if EP_LOG_LEVEL > 0
@@ -90,7 +90,7 @@ void ep_loop() {
     uint16_t time = ep.milliclk();
     if (ep.state == ASSOCIATING) {
         // Send association requests every 5 seconds
-        if (time - ep.time_last_tx >= 5000) {
+        if ((uint16_t) (time - ep.time_last_tx) >= 5000) {
             struct ep_mgmt_assoc *packet = (struct ep_mgmt_assoc *) ep.buffer;
             struct ep_header *header = (struct ep_header *) packet;
 
@@ -102,13 +102,17 @@ void ep_loop() {
 
             ep.send_udp(packet, sizeof(struct ep_mgmt_assoc));
             ep.time_last_tx = time;
-#if EP_LOG_LEVEL >= 4
+#if EP_LOG_LEVEL >= 3
             ep.log("[INFO] sending association request");
 #endif
         }
     } else if (ep.state == WAIT_FOR_SYNC || ep.state == CAMERA_ON || ep.state == CAMERA_OFF) {
         // Send ping every second
-        if (time - ep.time_last_tx >= 1000) {
+#if EP_LOG_LEVEL >= 3
+        sprintf(ep.log_buffer, "[DBG]  Time Difference: %hu vs %hu", time, ep.time_last_tx);
+        ep.log("[DBG] sending ping");
+#endif
+        if ((uint16_t) (time - ep.time_last_tx) >= 1000) {
             struct ep_mgmt_ping *packet = (struct ep_mgmt_ping *) ep.buffer;
             struct ep_header *header = (struct ep_header *) packet;
 
@@ -118,7 +122,7 @@ void ep_loop() {
 
             ep.send_udp(packet, sizeof(struct ep_mgmt_ping));
             ep.time_last_tx = time;
-#if EP_LOG_LEVEL >= 4
+#if EP_LOG_LEVEL >= 3
             ep.log("[INFO] sending ping");
 #endif
         }
@@ -217,7 +221,7 @@ static bool recv(void *buf, size_t len) {
         return false;
     }
 
-#if EP_LOG_LEVEL >= 1
+#if EP_LOG_LEVEL >= 2
 #define EP_WARN_MISMATCH(msg, fmt_exp, exp, fmt_got, got) {\
             sprintf(ep.log_buffer, "[WARN] " msg " (expected " fmt_exp ", got " fmt_got ")", exp, got); \
             ep.log(ep.log_buffer);}
@@ -232,7 +236,7 @@ static bool recv(void *buf, size_t len) {
         return false;
     }
 
-#if EP_LOG_LEVEL >= 2
+#if EP_LOG_LEVEL >= 3
 #define EP_INFO_DISCARD(state) sprintf(ep.log_buffer, "[INFO] discarding packet in state " state " (type %i, subtype %i)", \
                                 EP_GET_TYPE(eph), EP_GET_SUBTYPE(eph)); \
                                 ep.log(ep.log_buffer);
@@ -268,14 +272,14 @@ static bool recv(void *buf, size_t len) {
         if (ep.on_connect)
             ep.on_connect();
         EP_SET_STATE(WAIT_FOR_SYNC);
-#if EP_LOG_LEVEL >= 2
+#if EP_LOG_LEVEL >= 3
         ep.log("[INFO] received association frame");
 #endif
         return true;
     } else if (ep.state == WAIT_FOR_SYNC || ep.state == CAMERA_OFF || ep.state == CAMERA_ON) {
         if (handle_disassociation(eph)) return true;
 
-        if (EP_GET_TYPE(eph) != EP_TYPE_CTRL || EP_GET_TYPE(eph) != EP_TYPE_MGMT) {
+        if (EP_GET_TYPE(eph) != EP_TYPE_CTRL && EP_GET_TYPE(eph) != EP_TYPE_MGMT) {
             // Discard all packets except for mgmt and ctrl frames
             EP_INFO_DISCARD("wait for sync/camera {on,off}");
             return false;
@@ -289,7 +293,7 @@ static bool recv(void *buf, size_t len) {
 
             perform_sync();
             if (ep.state == WAIT_FOR_SYNC) EP_SET_STATE(CAMERA_OFF);
-#if EP_LOG_LEVEL >= 2
+#if EP_LOG_LEVEL >= 3
             ep.log("[INFO] received sync");
 #endif
             return true;
@@ -301,7 +305,7 @@ static bool recv(void *buf, size_t len) {
 
             if (ep.on_recv_restart)
                 ep.on_recv_restart();
-#if EP_LOG_LEVEL >= 2
+#if EP_LOG_LEVEL >= 3
             ep.log("[INFO] received restart");
 #endif
             return true;
@@ -319,7 +323,7 @@ static bool recv(void *buf, size_t len) {
                     EP_SET_STATE(CAMERA_OFF);
                 }
             }
-#if EP_LOG_LEVEL >= 2
+#if EP_LOG_LEVEL >= 3
             sprintf(ep.log_buffer, "[INFO] received config (%u bytes)", len - sizeof(struct ep_ctrl_config));
             ep.log(ep.log_buffer);
 #endif
@@ -330,14 +334,14 @@ static bool recv(void *buf, size_t len) {
                 return false;
             }
 
-#if EP_LOG_LEVEL >= 2
+#if EP_LOG_LEVEL >= 3
             ep.log("[INFO] received ping");
 #endif
             // last_time_rx will be set in calling function if we return true
             return true;
         } else {
             // Unknown packet type
-#if EP_LOG_LEVEL >= 1
+#if EP_LOG_LEVEL >= 2
             sprintf(ep.log_buffer, "[WARN] unknown type/subtype combination (type: %x, subtype: %x)", EP_GET_TYPE(eph), EP_GET_SUBTYPE(eph));
             ep.log(ep.log_buffer);
 #endif
@@ -355,11 +359,11 @@ static bool recv(void *buf, size_t len) {
 #undef EP_INFO_DISCARD
 
 static inline bool handle_disassociation(struct ep_header *eph) {
-    if (EP_GET_TYPE(eph) != EP_TYPE_MGMT || EP_GET_SUBTYPE(eph) != EP_SUBTYPE_MGMT_DASSOC) {
+    if (EP_GET_TYPE(eph) == EP_TYPE_MGMT && EP_GET_SUBTYPE(eph) == EP_SUBTYPE_MGMT_DASSOC) {
         if (ep.on_disconnect)
             ep.on_disconnect();
 
-#if EP_LOG_LEVEL >= 2
+#if EP_LOG_LEVEL >= 3
         ep.log("[INFO] successful disassociation");
 #endif
         EP_SET_STATE(IDLE);
