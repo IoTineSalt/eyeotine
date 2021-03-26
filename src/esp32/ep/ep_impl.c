@@ -108,10 +108,6 @@ void ep_loop() {
         }
     } else if (ep.state == WAIT_FOR_SYNC || ep.state == CAMERA_ON || ep.state == CAMERA_OFF) {
         // Send ping every second
-#if EP_LOG_LEVEL >= 3
-        sprintf(ep.log_buffer, "[DBG]  Time Difference: %hu vs %hu", time, ep.time_last_tx);
-        ep.log("[DBG] sending ping");
-#endif
         if ((uint16_t) (time - ep.time_last_tx) >= 1000) {
             struct ep_mgmt_ping *packet = (struct ep_mgmt_ping *) ep.buffer;
             struct ep_header *header = (struct ep_header *) packet;
