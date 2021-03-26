@@ -10,7 +10,7 @@ from queue import Queue
 parser = argparse.ArgumentParser(description='EP-MQTT-Server')
 parser.add_argument('--ipaddr', '-ip', type=str, default='0.0.0.0',
                     help='IP address for MQTT and EP')
-parser.add_argument('--epport', '-ep', type=int, default=2021,
+parser.add_argument('--epport', '-ep', type=int, default=58631,
                     help='EP Port')
 parser.add_argument('--mqttport', '-mp', type=int, default=1883,
                     help='MQTT Port')
@@ -76,11 +76,17 @@ while r_socks:
         if rc or mqtt_sock is None:
             logging.error("mqtt write error")
 
+
+
     if esp_sock in inputs:
         rc = esp_lib.read(esp_sock, esp_write_queue)
         if rc != 0:
             logging.error("esp socket read error")
 
+    # update esp time
+    esp_lib.update_time_and_ping()
+
     if esp_sock in outputs:
-        # TODO: WRITE
-        pass
+        while not esp_write_queue.empty():
+            msg = esp_write_queue.get()
+            esp_sock.sendto(*msg)
