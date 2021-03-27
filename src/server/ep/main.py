@@ -62,15 +62,13 @@ while r_socks:
         w_socks += [mqtt_sock]
     if not esp_write_queue.empty():
         w_socks += [esp_sock]
-    print(r_socks, w_socks)
     inputs, outputs, errors = select.select(r_socks, w_socks, r_socks, 0.05)
     if len(errors)> 0:
         logging.error("Socket error while executing select")
 
-    print(mqtt_sock)
     if mqtt_sock in inputs:
         rc = mqtt_client.loop_read()
-        
+
         if rc or mqtt_sock is None:
             logging.error("mqtt read error")
 
