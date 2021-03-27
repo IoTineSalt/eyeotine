@@ -10,7 +10,7 @@ from queue import Queue
 parser = argparse.ArgumentParser(description='EP-MQTT-Server')
 parser.add_argument('--ipaddr', '-ip', type=str, default='0.0.0.0',
                     help='IP address for MQTT and EP')
-parser.add_argument('--epport', '-ep', type=int, default=58631,
+parser.add_argument('--epport', '-ep', type=int, default=2021,
                     help='EP Port')
 parser.add_argument('--mqttport', '-mp', type=int, default=1883,
                     help='MQTT Port')

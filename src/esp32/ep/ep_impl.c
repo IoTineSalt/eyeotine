@@ -49,7 +49,7 @@ void ep_init(int (*send_udp)(void *buf, size_t len), uint16_t (*milliclk)(), voi
         .time_last_tx = milliclk(),
         .time_last_rx = milliclk(),
         .sync = -1,
-        .buffer = malloc(2300), // todo malloc 2300
+        .buffer = malloc(2300),
         .milliclk = milliclk,
         .send_udp = send_udp,
         .log = log,
