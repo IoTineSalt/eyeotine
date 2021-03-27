@@ -36,7 +36,7 @@ logging.info("connected to broker")
 
 
 # MQTT subscriptions
-MQTT_TOPIC = [("ota",2),("tracker",2),("change_settings",2)]
+MQTT_TOPIC = [("ota", 2),("tracker", 2),("change_settings", 2)]
 rc, _ = mqtt_client.subscribe(MQTT_TOPIC)
 if rc > 0:
     logging.error("no subscription possible")
@@ -93,3 +93,5 @@ while r_socks:
         while not esp_write_queue.empty():
             msg = esp_write_queue.get()
             esp_sock.sendto(*msg)
+
+    mqtt_client.loop_misc()

@@ -98,15 +98,6 @@ def get_subtype(packet):
 
 
 
-# print(Header.build(dict(ver_type_subtype=22)))
-# testheader = Header.parse(b'\0')
-# testmessage = Message.parse(b'\0Hellowolrd')
-# print(type(testheader.ver_type_subtype))
-# set_version(testheader,2)
-# print(Header.build(testheader))
-# Philipp = Enum(Byte, a=5, b=6)
-# print(Philipp)
-
 
 
 class Esp:
@@ -133,9 +124,12 @@ class Esp:
             # ASSOCIATION
             if get_type(header) != Types.TYPE_MGMT:
                 logging.error("false type. The header type should be TYPE_MGMGT")
+                esp_list.remove(self)
                 return
             if get_subtype(header) != SubtypesMgmt.SUBTYPE_MGMT_ASSOC:
                 logging.error("false type. The subtype should be SUBTYPE_MGMT_ASSOC")
+                esp_list.remove(self)
+                return
             association_response = HeaderWithFlags.parse(b'\0000')
             logging.info("Send association response")
             set_type(association_response.header, Types.TYPE_MGMT)
