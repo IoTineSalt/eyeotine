@@ -29,7 +29,7 @@ logging.info("bind esp socket")
 mqtt_client = Client()
 mqtt_client.on_connect = mqtt.on_connect
 mqtt_client.on_message = mqtt.on_message
-mqtt_client.connect(args.ipaddr, args.mqttport, 60)
+mqtt_client.connect("172.17.0.1", args.mqttport, 60)
 
 mqtt_sock = mqtt_client.socket()
 logging.info("connected to broker")
@@ -62,12 +62,15 @@ while r_socks:
         w_socks += [mqtt_sock]
     if not esp_write_queue.empty():
         w_socks += [esp_sock]
+    print(r_socks, w_socks)
     inputs, outputs, errors = select.select(r_socks, w_socks, r_socks, 0.05)
     if len(errors)> 0:
         logging.error("Socket error while executing select")
 
+    print(mqtt_sock)
     if mqtt_sock in inputs:
         rc = mqtt_client.loop_read()
+        
         if rc or mqtt_sock is None:
             logging.error("mqtt read error")
 

@@ -9,3 +9,10 @@ services:
       - ./broker/data:/mosquitto/data
       - ./broker/log:/mosquitto/log
       - ./broker/config:/mosquitto/config
+  server:
+    image: python
+    command: sh /root/entry.sh /root
+    ports:
+      - "2021:2021"
+    volumes:
+      - ./server/ep:/root
