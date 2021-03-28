@@ -46,8 +46,8 @@ static void log_none(char *str);
 void ep_init(int (*send_udp)(void *buf, size_t len), uint16_t (*milliclk)(), void (*log)(char *msg)) {
     ep = (struct ep) {
         .state = STOPPED,
-        .time_last_tx = milliclk(),
-        .time_last_rx = milliclk(),
+        .time_last_tx = milliclk() + 5000,
+        .time_last_rx = milliclk() + 5000,
         .sync = -1,
         .buffer = malloc(2300),
         .milliclk = milliclk,
@@ -150,7 +150,12 @@ int ep_send_img(void *buf, size_t len) {
     sprintf(ep.log_buffer, "[DBG]  ep_send_image(%p, %u) called", buf, len);
     ep.log(ep.log_buffer);
 #endif
-    // todo error when state wrong
+    if (ep.state != CAMERA_ON) {
+#if EP_LOG_LEVEL >= 2
+        ep.log("[WARN] can't send image in current state");
+#endif
+        return -1;
+    }
 #if EP_LOG_LEVEL >= 3
     sprintf(ep.log_buffer, "[INFO] new image to send (%u bytes)", len);
     ep.log(ep.log_buffer);

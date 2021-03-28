@@ -13,6 +13,7 @@ struct sockaddr_in sa_partner = {
     .sin_family = AF_INET
 };
 socklen_t sa_partner_len = sizeof(struct sockaddr_in);
+bool camera_state = false;
 
 uint16_t milliclk() {
     struct timespec ts;
@@ -47,6 +48,11 @@ void stop(int signum) {
 
 void reassociate() {
     ep_associate();
+}
+
+bool camera_switch(void *config, size_t len) {
+    camera_state = len > 0;
+    return camera_state;
 }
 
 int main(void) {
@@ -97,7 +103,10 @@ int main(void) {
 
     ep_init(send_udp, milliclk, logger);
     // On disconnect instantly try to find a new connection
+    ep_set_recv_config_cb(camera_switch);
     ep_set_disconnect_cb(reassociate);
+
+    srand(0);
 
 #define BUFLEN 4000
     void *buf = malloc(BUFLEN);
@@ -122,6 +131,12 @@ int main(void) {
             }
         } else {
             ep_recv_udp(buf, n);
+        }
+        if (camera_state && rand() % 150 == 0) {
+            int err;
+            if ((err = ep_send_img(&rand, 40000)) != 0) {
+                printf("Can't send image data. Error code: %i", err);
+            }
         }
     }
 }
