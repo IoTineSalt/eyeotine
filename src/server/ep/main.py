@@ -50,7 +50,7 @@ r_socks = [mqtt_sock, esp_sock]
 
 esp_write_queue = Queue()
 
-esp_lib.initialize_esp(esp_write_queue)
+esp_lib.initialize_esp(esp_write_queue, mqtt_client)
 mqtt_lib.initialize_mqtt(mqtt_client, esp_lib.get_esp_list())
 
 inputs = []

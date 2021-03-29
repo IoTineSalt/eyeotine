@@ -8,8 +8,13 @@ logging.basicConfig(level="INFO")
 
 # esp_write_queue = []
 esp_list = []
+esp_write_queue = None
+mqtt_client = None
 
-def initialize_esp(write_queue):
+def initialize_esp(write_queue,mqtt_cli):
+    global esp_write_queue
+    global mqtt_client
+    mqtt_client = mqtt_cli
     esp_write_queue = write_queue
 
 def get_esp_list():
@@ -32,7 +37,6 @@ def read(esp_sock, esp_write_queue):
     if accepted is False:
         esp_list.append(Esp(addr, port, esp_write_queue))
         esp_list[-1](data)
-
     return 0
 
 
