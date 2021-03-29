@@ -9,8 +9,11 @@ logging.basicConfig(level="INFO")
 # esp_write_queue = []
 esp_list = []
 
-def initialize(write_queue):
+def initialize_esp(write_queue):
     esp_write_queue = write_queue
+
+def get_esp_list():
+    return esp_list
 
 def update_time_and_ping():
     ms = time.time_ns() // 1000000
@@ -178,17 +181,24 @@ class Esp:
 
     def restart(self):
         restart_request = HeaderWithFlags.parse(b'\0000')
+        set_version(restart_request.header, 0)
         set_type(restart_request.header, Types.TYPE_CTRL)
         set_subtype(restart_request.header, SubtypeCtrl.SUBTYPE_CTRL_RESTART)
         set_flag(restart_request, 0)
         self.write(HeaderWithFlags.build(restart_request))
         logging.info("Send restart request")
 
-    def on_connect(self):
+    def send_ota(self, config):
         pass
 
-    def send_config(self):
-        pass
+    def send_config(self, config):
+        config_header = Header.parse(b'\x00\x00')
+        set_version(config_header, 0)
+        set_type(config_header, Types.TYPE_CTRL)
+        set_subtype(config_header, SubtypeCtrl.SUBTYPE_CTRL_CONFIG)
+        header_bytes = Header.build(config_header)
+        self.write(header_bytes + config)
+        logging.info("Send camera config")
 
     def on_disconnect(self):
         disassociation_request = HeaderWithFlags.parse(b'\0000')
@@ -203,18 +213,3 @@ class Esp:
 
 
     __call__ = read
-
-
-
-# import socket
-#
-# UDP_IP = "127.0.0.1"
-# UDP_PORT = 58631
-#
-# sock = socket.socket(socket.AF_INET, # Internet
-#                      socket.SOCK_DGRAM) # UDP
-# sock.bind((UDP_IP, UDP_PORT))
-#
-# while True:
-#     data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
-#     print("received message: %s" % data)
