@@ -15,8 +15,6 @@ mqtt_client = None
 
 def initialize_esp(write_queue,mqtt_cli):
     global esp_write_queue
-    global mqtt_client
-    mqtt_client = mqtt_cli
     esp_write_queue = write_queue
 
 def get_esp_list():
@@ -227,14 +225,23 @@ ImageHeader = BitStruct(
     "fragment_number" / BitsInteger(6)
 )
 
+class AutoVivification(dict):
+    """Implementation of perl's autovivification feature."""
+    def __getitem__(self, item):
+        try:
+            return dict.__getitem__(self, item)
+        except KeyError:
+            value = self[item] = type(self)()
+            return value
 
 class DataCollector:
-    def __init__(self):
-        self.data = defaultdict({}) # dict with keys as ip addresses
+    def __init__(self, mqtt_client):
+        self.data = AutoVivification({}) # dict with keys as ip addresses
+        self.mqtt_client = mqtt_client
 
     def collect(self):
         for esp in esp_list:
-            if not esp.data_queue.empty()
+            if not esp.data_queue.empty():
                 data = esp.data_queue.get()
                 header = ImageHeader.parse(data)
                 ip_addr = esp.addr
@@ -242,9 +249,13 @@ class DataCollector:
                 timestamp = header.timestamp
                 imag_frag = data[2:]
                 self.data[ip_addr][timestamp][fragment_number] = imag_frag
+        deletion_keys = []
         for key in self.data.keys():
-            if key is not in [esp.addr for esp in esp_list]:
-                del self.data[keys]
+            if key not in [esp.addr for esp in esp_list]:
+                deletion_keys.append(key)
+        for key in deletion_keys:
+            del self.data[key]
+            logging.info("delete esp data at "+ str(key))
 
 
     __call__ = collect

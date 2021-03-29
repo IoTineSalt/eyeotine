@@ -47,8 +47,8 @@ rc, _ = mqtt_client.subscribe(MQTT_TOPIC)
 if rc > 0:
     logging.error("no subscription possible")
 
-
-# MQTT client add callbacks
+#DataCollector
+data_collector = esp_lib.DataCollector(mqtt_client)
 
 
 # input and output sockets
@@ -79,6 +79,7 @@ while r_socks:
         if rc or mqtt_sock is None:
             logging.error("mqtt read error")
 
+
     if mqtt_sock in outputs:
         rc = mqtt_client.loop_write()
         if rc or mqtt_sock is None:
@@ -100,3 +101,4 @@ while r_socks:
             esp_sock.sendto(*msg)
 
     mqtt_client.loop_misc()
+    data_collector()
