@@ -10,6 +10,7 @@ from queue import Queue
 parser = argparse.ArgumentParser(description='EP-MQTT-Server')
 parser.add_argument('--ipaddr', '-ip', type=str, default='0.0.0.0',
                     help='IP address for MQTT and EP')
+parser.add_argument('--mqtthost','-mh',type=str, help='MQTT Server by hostname')
 parser.add_argument('--epport', '-ep', type=int, default=2021,
                     help='EP Port')
 parser.add_argument('--mqttport', '-mp', type=int, default=1883,
@@ -19,9 +20,14 @@ args = parser.parse_args()
 
 # define log level
 logging.basicConfig(level=args.log[0])
-
 # Socket bindings
 esp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+
+# mqqtserver runs on other hostname
+if args.mqtthost:
+    mqtt_ipaddr = socket.gethostbyname(args.mqtthost)
+else:
+    mqtt_ipaddr = args.ipaddr
 esp_sock.bind((args.ipaddr, args.epport))
 logging.info("bind esp socket")
 
@@ -29,7 +35,7 @@ logging.info("bind esp socket")
 mqtt_client = Client()
 mqtt_client.on_connect = mqtt_lib.on_connect
 mqtt_client.on_message = mqtt_lib.on_message
-mqtt_client.connect(args.ipaddr, args.mqttport, keepalive=60)
+mqtt_client.connect(mqtt_ipaddr, args.mqttport, keepalive=60)
 
 mqtt_sock = mqtt_client.socket()
 logging.info("connected to broker")
