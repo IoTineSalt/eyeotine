@@ -3,13 +3,13 @@ services:
   broker:
     image: eclipse-mosquitto:latest
     container_name: broker
-      #user: "1000:1000"
+    user: "1000:1000"
     ports:
       - "1883:1883"
     volumes:
-      - $PWD/broker/data:/mosquitto/data
-      - $PWD/broker/log:/mosquitto/log
-      - $PWD/broker/config:/mosquitto/config
+      - ./broker/data:/mosquitto/data
+      - ./broker/log:/mosquitto/log
+      - ./broker/config:/mosquitto/config
 
 
   server:
@@ -18,3 +18,4 @@ services:
       - "2021:2021/udp"
     depends_on:
       - broker
+
