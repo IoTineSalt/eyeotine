@@ -1,3 +1,2 @@
 paho-mqtt
-numpy
 construct
