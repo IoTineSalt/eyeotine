@@ -4,6 +4,8 @@ from construct import *
 import re
 import time
 import logging
+from collections import defaultdict
+
 logging.basicConfig(level="INFO")
 
 # esp_write_queue = []
@@ -65,7 +67,7 @@ class Types(Enum):
     TYPE_CTRL = 1
     TYPE_DATA = 2
 
-class SubtypesMgmt(Enum):
+class SubtypeMgmt(Enum):
     SUBTYPE_MGMT_ASSOC = 0
     SUBTYPE_MGMT_DASSOC =  1
     SUBTYPE_MGMT_PING = 2
@@ -133,14 +135,14 @@ class Esp:
                 logging.error("false type. The header type should be TYPE_MGMGT")
                 esp_list.remove(self)
                 return
-            if get_subtype(header) != SubtypesMgmt.SUBTYPE_MGMT_ASSOC:
+            if get_subtype(header) != SubtypeMgmt.SUBTYPE_MGMT_ASSOC:
                 logging.error("false type. The subtype should be SUBTYPE_MGMT_ASSOC")
                 esp_list.remove(self)
                 return
             association_response = HeaderWithFlags.parse(b'\0000')
             logging.info("Send association response")
             set_type(association_response.header, Types.TYPE_MGMT)
-            set_subtype(association_response.header, SubtypesMgmt.SUBTYPE_MGMT_ASSOC)
+            set_subtype(association_response.header, SubtypeMgmt.SUBTYPE_MGMT_ASSOC)
             set_flag(association_response, 1)
             self.write(HeaderWithFlags.build(association_response))
             self.state =States.ASSOCIATED
@@ -152,19 +154,22 @@ class Esp:
         else:
             # state SYNCED
             if get_type(header) == Types.TYPE_MGMT:
-                if get_subtype(header) == SubtypesMgmt.SUBTYPE_MGMT_PING:
+                if get_subtype(header) == SubtypeMgmt.SUBTYPE_MGMT_PING:
                     logging.info("receive ping")
-                if get_subtype(header) == SubtypesMgmt.SUBTYPE_MGMT_ASSOC:
-                    loffing.error("should not receive associating request")
-
-
+                if get_subtype(header) == SubtypeMgmt.SUBTYPE_MGMT_ASSOC:
+                    logging.error("should not receive associating request")
+                    esp_list.remove(self)
+                    return
+            if get_type(header) == Types.TYPE_DATA:
+                if get_subtype(header) == SubtypeData.SUBTYPE_DATA_IMAGE:
+                    self.data_queue.put(data[1:])
 
     def ping(self):
         if self.timestamp - self.last_recv_package_timestamp > 1000 \
             and self.timestamp - self.last_send_package_timestamp >=900:
             ping = HeaderWithFlags.parse(b'\0000')
             set_type(ping.header, Types.TYPE_MGMT)
-            set_subtype(ping.header, SubtypesMgmt.SUBTYPE_MGMT_PING)
+            set_subtype(ping.header, SubtypeMgmt.SUBTYPE_MGMT_PING)
             set_flag(ping, 0)
             self.write(HeaderWithFlags.build(ping))
             logging.info("send ping")
@@ -207,13 +212,39 @@ class Esp:
     def on_disconnect(self):
         disassociation_request = HeaderWithFlags.parse(b'\0000')
         set_type(disassociation_request.header, Types.TYPE_MGMT)
-        set_subtype(disassociation_request.header, SubtypesMgmt.SUBTYPE_MGMT_DASSOC)
+        set_subtype(disassociation_request.header, SubtypeMgmt.SUBTYPE_MGMT_DASSOC)
         set_flag(disassociation_request, 0)
         self.write(HeaderWithFlags.build(disassociation_request))
         logging.info("Send disassociation")
         esp_list.remove(self)
 
-
-
-
     __call__ = read
+
+###############################################################################
+# Data Structs
+ImageHeader = BitStruct(
+    "timestamp" / BitsInteger(10),
+    "fragment_number" / BitsInteger(6)
+)
+
+
+class DataCollector:
+    def __init__(self):
+        self.data = defaultdict({}) # dict with keys as ip addresses
+
+    def collect(self):
+        for esp in esp_list:
+            if not esp.data_queue.empty()
+                data = esp.data_queue.get()
+                header = ImageHeader.parse(data)
+                ip_addr = esp.addr
+                fragment_number = header.fragment_number
+                timestamp = header.timestamp
+                imag_frag = data[2:]
+                self.data[ip_addr][timestamp][fragment_number] = imag_frag
+        for key in self.data.keys():
+            if key is not in [esp.addr for esp in esp_list]:
+                del self.data[keys]
+
+
+    __call__ = collect
