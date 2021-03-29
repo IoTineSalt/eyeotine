@@ -119,6 +119,9 @@ int main(void) {
     ep_start();
     ep_associate();
 
+#define IMGBUFLEN 40000
+    void *imgbuf = malloc(IMGBUFLEN);
+
     ssize_t n;
     while (1) {
         ep_loop();
@@ -134,7 +137,7 @@ int main(void) {
         }
         if (camera_state && rand() % 150 == 0) {
             int err;
-            if ((err = ep_send_img(&rand, 40000)) != 0) {
+            if ((err = ep_send_img(imgbuf, rand() % IMGBUFLEN)) != 0) {
                 printf("Can't send image data. Error code: %i", err);
             }
         }
