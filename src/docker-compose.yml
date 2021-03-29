@@ -2,10 +2,11 @@ version: "3.3"
 services:
   broker:
     image: eclipse-mosquitto:latest
-    user: "1000:1000"
+      #user: "1000:1000"
     ports:
       - "1883:1883"
     volumes:
-      - ./broker/data:/mosquitto/data
-      - ./broker/log:/mosquitto/log
-      - ./broker/config:/mosquitto/config
+      - $PWD/broker/data:/mosquitto/data
+      - $PWD/broker/log:/mosquitto/log
+      - $PWD/broker/config:/mosquitto/config
+  
