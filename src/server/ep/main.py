@@ -2,7 +2,7 @@ import socket
 from paho.mqtt.client import Client
 import select
 import logging
-import mqtt
+import mqtt_lib
 import esp_lib
 import argparse
 from queue import Queue
@@ -27,16 +27,16 @@ logging.info("bind esp socket")
 
 
 mqtt_client = Client()
-mqtt_client.on_connect = mqtt.on_connect
-mqtt_client.on_message = mqtt.on_message
-mqtt_client.connect(args.ipaddr, args.mqttport, 60)
+mqtt_client.on_connect = mqtt_lib.on_connect
+mqtt_client.on_message = mqtt_lib.on_message
+mqtt_client.connect(args.ipaddr, args.mqttport, keepalive=60)
 
 mqtt_sock = mqtt_client.socket()
 logging.info("connected to broker")
 
 
 # MQTT subscriptions
-MQTT_TOPIC = [("ota", 2),("tracker", 2),("change_settings", 2)]
+MQTT_TOPIC = [("ota", 2),("tracker", 2),("server/camera_config", 2)]
 rc, _ = mqtt_client.subscribe(MQTT_TOPIC)
 if rc > 0:
     logging.error("no subscription possible")
@@ -50,7 +50,8 @@ r_socks = [mqtt_sock, esp_sock]
 
 esp_write_queue = Queue()
 
-esp_lib.initialize(esp_write_queue)
+esp_lib.initialize_esp(esp_write_queue)
+mqtt_lib.initialize_mqtt(mqtt_client, esp_lib.get_esp_list())
 
 inputs = []
 outputs = []
@@ -68,11 +69,12 @@ while r_socks:
 
     if mqtt_sock in inputs:
         rc = mqtt_client.loop_read()
+        mqtt_lib.read()
         if rc or mqtt_sock is None:
             logging.error("mqtt read error")
 
     if mqtt_sock in outputs:
-        rc = mqtt_client.loop_write(1)
+        rc = mqtt_client.loop_write()
         if rc or mqtt_sock is None:
             logging.error("mqtt write error")
 
