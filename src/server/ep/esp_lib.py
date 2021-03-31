@@ -163,8 +163,7 @@ class Esp:
                     self.data_queue.put(data[1:])
 
     def ping(self):
-        if self.timestamp - self.last_recv_package_timestamp > 1000 \
-            and self.timestamp - self.last_send_package_timestamp >=900:
+        if self.timestamp - self.last_send_package_timestamp >=900:
             ping = HeaderWithFlags.parse(b'\0000')
             set_type(ping.header, Types.TYPE_MGMT)
             set_subtype(ping.header, SubtypeMgmt.SUBTYPE_MGMT_PING)
