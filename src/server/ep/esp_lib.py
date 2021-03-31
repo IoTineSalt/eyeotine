@@ -163,7 +163,7 @@ class Esp:
                     self.data_queue.put(data[1:])
 
     def ping(self):
-        if self.timestamp - self.last_send_package_timestamp >=900:
+        if self.timestamp - self.last_send_package_timestamp >= 1000:
             ping = HeaderWithFlags.parse(b'\0000')
             set_type(ping.header, Types.TYPE_MGMT)
             set_subtype(ping.header, SubtypeMgmt.SUBTYPE_MGMT_PING)
@@ -220,6 +220,7 @@ class Esp:
 ###############################################################################
 # Data Structs
 ImageHeader = BitStruct(
+    "flag" / BitsInteger(8),
     "timestamp" / BitsInteger(10),
     "fragment_number" / BitsInteger(6)
 )
@@ -244,6 +245,7 @@ class DataCollector:
                 data = esp.data_queue.get()
                 header = ImageHeader.parse(data)
                 ip_addr = esp.addr
+                last_package_flag = True if header.flag == 1 else False
                 fragment_number = header.fragment_number
                 timestamp = header.timestamp
                 imag_frag = data[2:]
