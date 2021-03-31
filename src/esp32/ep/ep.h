@@ -72,12 +72,6 @@ struct ep_ctrl_config {
 
 struct ep_data_image {
     struct ep_header header;
-    uint16_t timestamp_fragno;
-    uint8_t data[0];
-};
-
-struct ep_data_image {
-    struct ep_header header;
     uint8_t flags;
     uint16_t timestamp_fragno;
     uint8_t data[0];

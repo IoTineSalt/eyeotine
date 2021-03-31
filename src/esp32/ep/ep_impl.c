@@ -40,7 +40,7 @@ static struct ep ep;
 static bool recv(void *buf, size_t len);
 static inline bool handle_disassociation(struct ep_header *eph);
 static void perform_sync();
-static int send_img_frag(void *buf, size_t len, uint8_t frag_no, uint16_t timestamp);
+static int send_img_frag(void *buf, size_t len, uint8_t frag_no, uint16_t timestamp, bool is_last_fragment);
 static void log_none(char *str);
 
 void ep_init(int (*send_udp)(void *buf, size_t len), uint16_t (*milliclk)(), void (*log)(char *msg)) {
@@ -395,7 +395,7 @@ static int send_img_frag(void *buf, size_t len, uint8_t frag_no, uint16_t timest
     EP_SET_TYPE(header, EP_TYPE_DATA);
     EP_SET_SUBTYPE(header, EP_SUBTYPE_DATA_IMAGE);
 
-    packet.flags = is_last_fragment ? 1 : 0;
+    packet->flags = is_last_fragment ? 1 : 0;
 
     EP_SET_DATA_TIMESTAMP(packet, timestamp);
     EP_SET_DATA_FRAGMENT_NO(packet, frag_no);
