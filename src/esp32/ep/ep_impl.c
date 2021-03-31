@@ -122,8 +122,18 @@ void ep_loop() {
             ep.log("[INFO] sending ping");
 #endif
         }
+
+        // Check for timeout
+        if ((uint16_t) (time - ep.time_last_rx) >= 5000) {
+#if EP_LOG_LEVEL >= 2
+            ep.log("[WARN] connection timeout");
+#endif
+            EP_SET_STATE(IDLE);
+            if (ep.on_disconnect)
+                ep.on_disconnect();
+
+        }
     }
-    // todo auto-disconnect
 }
 
 void ep_associate() {
@@ -167,7 +177,7 @@ int ep_send_img(void *buf, size_t len) {
     int err;
     while (offset < len) {
         size_t frag_size = (len - offset > 2200) ? 2200 : len - offset;
-        if ((err = send_img_frag(buf + offset, frag_size, frag_no, timestamp)) != 0) {
+        if ((err = send_img_frag(buf + offset, frag_size, frag_no, timestamp, len - offset <= 2200)) != 0) {
             return err;
         }
         frag_no++;
@@ -377,13 +387,15 @@ static void perform_sync() {
     ep.sync = ep.milliclk() % 1024;
 }
 
-static int send_img_frag(void *buf, size_t len, uint8_t frag_no, uint16_t timestamp) {
+static int send_img_frag(void *buf, size_t len, uint8_t frag_no, uint16_t timestamp, bool is_last_fragment) {
     struct ep_data_image *packet = (struct ep_data_image *) ep.buffer;
     struct ep_header *header = (struct ep_header *) packet;
 
     EP_SET_VERSION(header, 0);
     EP_SET_TYPE(header, EP_TYPE_DATA);
     EP_SET_SUBTYPE(header, EP_SUBTYPE_DATA_IMAGE);
+
+    packet.flags = is_last_fragment ? 1 : 0;
 
     EP_SET_DATA_TIMESTAMP(packet, timestamp);
     EP_SET_DATA_FRAGMENT_NO(packet, frag_no);
