@@ -19,3 +19,7 @@ services:
     depends_on:
       - broker
 
+  prediction:
+    build: ./prediction
+    depends_on:
+      - broker
