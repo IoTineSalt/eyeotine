@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <string.h>
+#include <endian.h>
 
 // Possible log level:
 //   0 - No log
@@ -80,8 +81,8 @@ struct ep_data_image {
 #define EP_GET_DATA_TIMESTAMP(packet) (((packet)->timestamp_fragno & 0xFFC0) >> 6)
 #define EP_GET_DATA_FRAGMENT_NO(packet) ((packet)->timestamp_fragno & 0x003F)
 
-#define EP_SET_DATA_TIMESTAMP(packet, val) (packet)->timestamp_fragno = ((packet)->timestamp_fragno & 0x003F) | ((val & 0x03FF) << 6)
-#define EP_SET_DATA_FRAGMENT_NO(packet, val) (packet)->timestamp_fragno = ((packet)->timestamp_fragno & 0xFFC0) | (val & 0x003F)
+#define EP_SET_DATA_TIMESTAMP(packet, val) (packet)->timestamp_fragno = be16toh((packet)->timestamp_fragno); (packet)->timestamp_fragno = ((packet)->timestamp_fragno & 0x003F) | ((val & 0x03FF) << 6); (packet)->timestamp_fragno = htobe16((packet)->timestamp_fragno)
+#define EP_SET_DATA_FRAGMENT_NO(packet, val) (packet)->timestamp_fragno = be16toh((packet)->timestamp_fragno); (packet)->timestamp_fragno = ((packet)->timestamp_fragno & 0xFFC0) | (val & 0x003F); (packet)->timestamp_fragno = htobe16((packet)->timestamp_fragno)
 
 // API Functions
 
