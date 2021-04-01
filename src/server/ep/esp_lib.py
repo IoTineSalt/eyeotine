@@ -5,6 +5,8 @@ import re
 import time
 import logging
 from collections import defaultdict
+import base64
+import json
 
 logging.basicConfig(level="INFO")
 
@@ -245,18 +247,49 @@ class DataCollector:
     def __init__(self, mqtt_client):
         self.data = AutoVivification({}) # dict with keys as ip addresses
         self.mqtt_client = mqtt_client
+        self.timestamp = None
 
     def collect(self):
+        self.timestamp = time.time_ns() / 1000000
+        # add new data to data dict
         for esp in esp_list:
             if not esp.data_queue.empty():
                 data = esp.data_queue.get()
                 header = ImageHeader.parse(data)
                 ip_addr = esp.addr
-                last_package_flag = True if header.flag == 1 else False
                 fragment_number = header.fragment_number
                 timestamp = header.timestamp
-                imag_frag = data[2:]
+                imag_frag = data[3:]
                 self.data[ip_addr][timestamp][fragment_number] = imag_frag
+                if header.flag & 1 > 0:
+                    self.data[ip_addr][timestamp]["finished"] = self.timestamp
+
+        deletion_keys = []
+        for ip_addr in self.data.keys():
+            for timestamp in self.data[ip_addr].keys():
+                if self.data[ip_addr][timestamp]["finished"]:
+                    # if last package receive to old delete timestamp data
+                    old_timestamp = self.data[ip_addr][timestamp]["finished"]
+                    if self.timestamp - old_timestamp > 100:
+                        logging.info("delete old timestamp")
+                        deletion_keys.append((ip_addr, timestamp))
+                        continue
+
+                    # test if all fragments received then send image
+                    addr_timestamp_dict = dict(self.data[ip_addr][timestamp])
+                    del addr_timestamp_dict["finished"]
+                    addr_timestamp_dict = dict(sorted(addr_timestamp_dict.items()))
+                    keys = list(addr_timestamp_dict.keys())
+                    highest_key = keys[-1]
+                    comparision_list = list(range(highest_key + 1))
+                    if comparision_list == keys:
+                        self.send_image(addr_timestamp_dict, ip_addr, timestamp)
+                        deletion_keys.append((ip_addr, timestamp))
+
+        for ip_addr, timestamp in deletion_keys:
+            del self.data[ip_addr][timestamp]
+
+        # delete data for ip_addr if not in use any more
         deletion_keys = []
         for key in self.data.keys():
             if key not in [esp.addr for esp in esp_list]:
@@ -265,5 +298,16 @@ class DataCollector:
             del self.data[key]
             logging.info("delete esp data at "+ str(key))
 
+    def send_image(self, data, ip_addr, timestamp):
+        logging.info("send image")
+        byte_str = b''.join(data.values())
+        msg = {}
+        msg['data'] = base64.b64encode(byte_str).decode('ascii')
+        msg['timestamp'] = timestamp
+        msg['source_ipaddr'] = ip_addr
+        msg_json = json.dumps(msg)
+        return_value = self.mqtt_client.publish("server/images/data", msg_json, qos=2)
+        if return_value[0] != 0:
+            logging.error("error while sending")
 
     __call__ = collect

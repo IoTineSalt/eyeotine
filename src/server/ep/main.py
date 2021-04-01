@@ -69,7 +69,7 @@ while r_socks:
         w_socks += [mqtt_sock]
     if not esp_write_queue.empty():
         w_socks += [esp_sock]
-    inputs, outputs, errors = select.select(r_socks, w_socks, r_socks, 0.05)
+    inputs, outputs, errors = select.select(r_socks, w_socks, r_socks, 0.01)
     if len(errors)> 0:
         logging.error("Socket error while executing select")
 
