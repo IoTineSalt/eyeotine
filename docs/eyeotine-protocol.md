@@ -27,6 +27,8 @@ Version of this specification: **Draft-1.0**
   - (unused) (7 bit)
 #### Camera Settings (header=0x12)
 - (variable)
+#### Ota Installation request (header=0x13)
+- (none)
 
 ### Data (header=0x20)
 #### Image Data (header=0x20)
@@ -107,7 +109,7 @@ In this state, the server may receive the following packet types:
 In this state, the server may not send any packets.
 
 #### Associated
-After association, the server shall resynchronize all clients. 
+After association, the server shall resynchronize all clients.
 
 In this state, the server may receive the following packet types:
 - Management
@@ -126,4 +128,3 @@ In this state, the server may receive the following packet types:
 In this state, the server may send the following packet types:
 - Management
 - Control
-

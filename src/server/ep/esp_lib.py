@@ -74,6 +74,7 @@ class SubtypeCtrl(Enum):
     SUBTYPE_CTRL_RESTART = 0
     SUBTYPE_CTRL_SYNC = 1
     SUBTYPE_CTRL_CONFIG = 2
+    SUBTYPE_CTRL_OTA = 3
 
 class SubtypeData(Enum):
     SUBTYPE_DATA_IMAGE = 0
@@ -195,7 +196,13 @@ class Esp:
         logging.info("Send restart request")
 
     def send_ota(self, config):
-        pass
+        ota_request = HeaderWithFlags.parse(b'\0000')
+        set_version(ota_request.header, 0)
+        set_type(ota_request.header, Types.TYPE_CTRL)
+        set_subtype(ota_request.header, SubtypeCtrl.SUBTYPE_CTRL_OTA)
+        set_flag(ota_request, 0)
+        self.write(HeaderWithFlags.build(ota_request))
+        logging.info("Send ota request")
 
     def send_config(self, config):
         config_header = Header.parse(b'\x00\x00')
