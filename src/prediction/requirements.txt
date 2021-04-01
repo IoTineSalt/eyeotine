@@ -1,5 +1,4 @@
 paho-mqtt
-bokeh
+wheel
 numpy
 yolov5
-
