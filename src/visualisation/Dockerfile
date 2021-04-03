@@ -1,4 +1,4 @@
-FROM python
+FROM python:3.9-slim
 WORKDIR .
 COPY requirements.txt requirements.txt
 RUN apt-get update && apt install libgl1-mesa-glx -y
