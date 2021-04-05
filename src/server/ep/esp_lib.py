@@ -8,7 +8,7 @@ from collections import defaultdict
 import base64
 import json
 
-logging.basicConfig(level="INFO")
+logging.basicConfig(level="DEBUG")
 
 # esp_write_queue = []
 esp_list = []
@@ -30,10 +30,11 @@ def update_time_and_ping():
 
 
 def read(esp_sock, esp_write_queue):
-    data, (addr, port) = esp_sock.recvfrom(1024)
+    data, (addr, port) = esp_sock.recvfrom(3600)
     accepted = False
     for esp in esp_list:
         if addr == esp.addr and port == esp.port:
+            logging.debug("incoming package of size " + str(len(data)))
             esp(data)
             accepted = True
     if accepted is False:
@@ -304,6 +305,7 @@ class DataCollector:
     def send_image(self, data, ip_addr, timestamp):
         logging.info("send image")
         byte_str = b''.join(data.values())
+        logging.debug("send image of size " + str(len(byte_str)))
         msg = {}
         msg['data'] = base64.b64encode(byte_str).decode('ascii')
         msg['timestamp'] = timestamp
