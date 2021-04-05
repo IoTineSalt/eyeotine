@@ -40,6 +40,7 @@ struct ep_header {
 #define EP_SUBTYPE_CTRL_RESTART 0
 #define EP_SUBTYPE_CTRL_SYNC 1
 #define EP_SUBTYPE_CTRL_CONFIG 2
+#define EP_SUBTYPE_CTRL_OTA 3
 
 #define EP_TYPE_DATA 2
 #define EP_SUBTYPE_DATA_IMAGE 0
@@ -69,6 +70,10 @@ struct ep_ctrl_sync {
 struct ep_ctrl_config {
     struct ep_header header;
     uint8_t config[0];
+};
+
+struct ep_ctrl_ota {
+    struct ep_header header;
 };
 
 struct ep_data_image {
@@ -195,6 +200,13 @@ void ep_set_recv_config_cb(bool (*on_recv_config)(void *config, size_t len));
  * @param on_recv_restart Callback handler
  *****************************************************************************/
 void ep_set_recv_restart_cb(void (*on_recv_restart)());
+
+/**************************************************************************//**
+ * Set a callback for an incoming OTA request
+ *
+ * @param on_recv_ota Callback handler
+ *****************************************************************************/
+void ep_set_ota_cb(void (*on_recv_ota)());
 
 
 #endif //EYEOTINE_EP_H

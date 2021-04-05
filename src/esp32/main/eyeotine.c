@@ -8,6 +8,9 @@
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
 #include "string.h"
+#include "driver/gpio.h"
+#include "sdkconfig.h"
+#include "esp_spi_flash.h"
 
 #include "nvs.h"
 #include "nvs_flash.h"
@@ -24,7 +27,6 @@ static const char *TAG = "eyeotine";
 extern const uint8_t server_cert_pem_start[] asm("_binary_ca_cert_pem_start");
 extern const uint8_t server_cert_pem_end[] asm("_binary_ca_cert_pem_end");
 
-static bool ep_operation = false;
 static bool send_images = false;
 static int udpsock;
 
@@ -61,21 +63,19 @@ void ota_task(void *pvParameter) {
     ESP_LOGI(TAGOTA, "Starting OTA");
 
     esp_http_client_config_t config = {
-        .url = CONFIG_OTA_UPGRADE_URL,
+        .url = "http://192.168.0.231:8080/",
         .cert_pem = (char *) server_cert_pem_start,
         .event_handler = _http_event_handler,
     };
 
-#ifdef CONFIG_OTA_SKIP_COMMON_NAME_CHECK
+    // todo make this secure
     config.skip_cert_common_name_check = true;
-#endif
 
     esp_err_t ret = esp_https_ota(&config);
     if (ret == ESP_OK) {
         esp_restart();
     } else {
         ESP_LOGW(TAGOTA, "Firmware upgrade not available");
-        ep_operation = true;
     }
     while (1) {
         // todo remove this? maybe vTaskDelete is the right function
@@ -91,7 +91,7 @@ static struct sockaddr_in sin = {
 int eyeotine_send_udp(void *buf, size_t len) {
     // todo retry a few times if ERRWOULDBLOCK
     int err = sendto(udpsock, buf, len, 0, (struct sockaddr *) &sin, sizeof(sin));
-
+    if (err > 0) err = 0;
     return err;
 }
 
@@ -115,23 +115,31 @@ void eyeotine_on_disconnect() {
 
 bool eyeotine_on_config(void *config, size_t len) {
     send_images = !send_images;
+
+    ESP_LOGI(TAG, "Camera config set to: %i", send_images);
     // todo implement config spec
     return send_images;
 }
 
-void eyeotine_task(void *pvParameter) {
-    while (!ep_operation) {
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-    }
+void start_ota() {
+    ESP_LOGI(TAG, "Received OTA");
+    ESP_LOGI(TAG, "Shutting down EP");
+    ep_stop();
 
+    // Start OTA Task
+    xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, NULL);
+}
+
+void eyeotine_camera_task(void *pvParameter);
+
+void eyeotine_task(void *pvParameter) {
     ESP_LOGI(TAG, "Starting operation");
 
     // Setup UDP socket
     udpsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
     if (udpsock < 0) {
         ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
-        ep_operation = false;
-        return;
+        goto ep_error;
     }
 
     int flags = fcntl(udpsock, F_GETFL);
@@ -144,6 +152,7 @@ void eyeotine_task(void *pvParameter) {
     ep_init(eyeotine_send_udp, eyeotine_milliclk, eyeotine_log);
     ep_set_disconnect_cb(eyeotine_on_disconnect);
     ep_set_recv_config_cb(eyeotine_on_config);
+    ep_set_ota_cb(start_ota);
 
 #define BUFLEN 2500
     void *buf = malloc(BUFLEN);
@@ -153,6 +162,8 @@ void eyeotine_task(void *pvParameter) {
 
     ep_start();
     ep_associate();
+
+    xTaskCreate(&eyeotine_camera_task, "eyeotine_camera_task", 8192, NULL, 4, NULL);
 
     while (1) {
         ep_loop();
@@ -171,26 +182,119 @@ void eyeotine_task(void *pvParameter) {
         }
     }
 #undef BUFLEN
+
+    while (1) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "EP Success");
+    }
+
+    ep_error:
+    while (1) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "EP Error ++ EP Error ++ EP Error ++ EP Error ++ EP Error");
+    }
+    return;
 }
 
-//WROVER-KIT PIN Map
-#define CAM_PIN_PWDN    -1 //power down is not used
-#define CAM_PIN_RESET   -1 //software reset will be performed
-#define CAM_PIN_XCLK    21
-#define CAM_PIN_SIOD    26
-#define CAM_PIN_SIOC    27
+//camera_config_t camera_config = {
+//    .ledc_channel = LEDC_CHANNEL_0,
+//    .ledc_timer = LEDC_TIMER_0,
+//    .pin_d0 = 35,
+//    .pin_d1 = 17,
+//    .pin_d2 = 34,
+//    .pin_d3 = 5,
+//    .pin_d4 = 39,
+//    .pin_d5 = 18,
+//    .pin_d6 = 36,
+//    .pin_d7 = 19,
+//    .pin_xclk = 27,
+//    .pin_pclk = 21,
+//    .pin_vsync = 22,
+//    .pin_href = 26,
+//    .pin_sscb_sda = 25,
+//    .pin_sscb_scl = 23,
+//    .pin_reset = 15,
+//    .xclk_freq_hz = 20000000,
+//};
+//
+//#define CAMERA_PIXEL_FORMAT CAMERA_PF_GRAYSCALE
+//#define CAMERA_FRAME_SIZE CAMERA_FS_QVGA
+//
+//static camera_pixelformat_t s_pixel_format;
+//
+//void eyeotine_camera_task(void *pvParameter) {
+//    camera_model_t camera_model;
+//    esp_err_t err = camera_probe(&camera_config, &camera_model);
+//    if (err != ESP_OK) {
+//        ESP_LOGE(TAG, "Camera probe failed with error 0x%x", err);
+//        goto cam_error;
+//    }
+//
+//    if (camera_model == CAMERA_OV7725) {
+//        s_pixel_format = CAMERA_PIXEL_FORMAT;
+//        camera_config.frame_size = CAMERA_FRAME_SIZE;
+//        ESP_LOGI(TAG, "Detected OV7725 camera, using %s bitmap format",
+//                 CAMERA_PIXEL_FORMAT == CAMERA_PF_GRAYSCALE ?
+//                 "grayscale" : "RGB565");
+//    } else if (camera_model == CAMERA_OV2640) {
+//        ESP_LOGI(TAG, "Detected OV2640 camera, using JPEG format");
+//        s_pixel_format = CAMERA_PF_JPEG;
+//        camera_config.frame_size = CAMERA_FRAME_SIZE;
+//        camera_config.jpeg_quality = 15;
+//    } else {
+//        ESP_LOGE(TAG, "Camera not supported");
+//        goto cam_error;
+//    }
+//
+//
+//    camera_config.pixel_format = s_pixel_format;
+//    err = camera_init(&camera_config);
+//    if (err != ESP_OK) {
+//        ESP_LOGE(TAG, "Camera init failed with error 0x%x", err);
+//        goto cam_error;
+//    }
+//
+//    err = camera_run();
+//    if (err != ESP_OK) {
+//        ESP_LOGD(TAG, "Camera capture failed with error 0x%x", err);
+//        goto cam_error;
+//    }
+//
+//    while (1) {
+//        if (send_images) {
+//            ESP_LOGI(TAG, "Trying to send image...");
+//            ep_send_img(camera_get_fb(), camera_get_data_size());
+//        }
+//        // todo we will need to consider, that sending of the image may take quite a few milliseconds
+//        vTaskDelay(1000 / portTICK_PERIOD_MS);
+//    }
+//
+//    cam_error:
+//    while (1) {
+//        ESP_LOGI(TAG, "Cam Error: 0x%x", err);
+//        vTaskDelay(1000 / portTICK_PERIOD_MS);
+//    }
+//
+//}
 
-#define CAM_PIN_D7      35
-#define CAM_PIN_D6      34
-#define CAM_PIN_D5      39
-#define CAM_PIN_D4      36
-#define CAM_PIN_D3      19
-#define CAM_PIN_D2      18
-#define CAM_PIN_D1       5
-#define CAM_PIN_D0       4
-#define CAM_PIN_VSYNC   25
-#define CAM_PIN_HREF    23
-#define CAM_PIN_PCLK    22
+//ESP32-CAM
+#define CAM_PIN_PWDN    32
+#define CAM_PIN_RESET   -1 //software reset will be performed
+#define CAM_PIN_XCLK    0//GPIO
+#define CAM_PIN_SIOD    26//GPIO
+#define CAM_PIN_SIOC    27//GPIO
+
+#define CAM_PIN_D7      35//GPIO
+#define CAM_PIN_D6      34//GPIO
+#define CAM_PIN_D5      39//GPIO (sensor VN)
+#define CAM_PIN_D4      36//GPIO (sensor VP)
+#define CAM_PIN_D3      21//GPIO
+#define CAM_PIN_D2      19//GPIO
+#define CAM_PIN_D1      18//GPIO
+#define CAM_PIN_D0       5//GPIO
+#define CAM_PIN_VSYNC   25//GPIO
+#define CAM_PIN_HREF    23//GPIO
+#define CAM_PIN_PCLK    22//GPIO
 
 static camera_config_t camera_config = {
     .pin_pwdn  = CAM_PIN_PWDN,
@@ -212,38 +316,49 @@ static camera_config_t camera_config = {
     .pin_pclk = CAM_PIN_PCLK,
 
     //XCLK 20MHz or 10MHz for OV2640 double FPS (Experimental)
-    .xclk_freq_hz = 20000000,
+    .xclk_freq_hz = 10000000,
     .ledc_timer = LEDC_TIMER_0,
     .ledc_channel = LEDC_CHANNEL_0,
 
     .pixel_format = PIXFORMAT_JPEG,//YUV422,GRAYSCALE,RGB565,JPEG
-    .frame_size = FRAMESIZE_VGA,//QQVGA-QXGA Do not use sizes above QVGA when not JPEG
+    .frame_size = FRAMESIZE_UXGA,//QQVGA-QXGA Do not use sizes above QVGA when not JPEG
 
     .jpeg_quality = 12, //0-63 lower number means higher quality
     .fb_count = 1 //if more than one, i2s runs in continuous mode. Use only with JPEG
 };
 
 void eyeotine_camera_task(void *pvParameter) {
-//    // Camera init (not sure if needed)
-//    if (CAM_PIN_PWDN != -1) {
-//        pinMode(CAM_PIN_PWDN, OUTPUT);
-//        digitalWrite(CAM_PIN_PWDN, LOW);
-//    }
+    //power up the camera if PWDN pin is defined
+    if (CAM_PIN_PWDN != -1) {
+        gpio_pad_select_gpio(CAM_PIN_PWDN);
+        gpio_set_direction(CAM_PIN_PWDN, GPIO_MODE_OUTPUT);
+        gpio_set_level(CAM_PIN_PWDN, 0);
+    }
 
     esp_err_t err = esp_camera_init(&camera_config);
     if (err != ESP_OK) {
-        ESP_LOGE(TAG, "Camera init failed with error %d", err);
-        return;
+        ESP_LOGE(TAG, "Camera init failed with error 0x%x", err);
+        goto cam_error;
     }
 
     while (1) {
         if (send_images) {
+            ESP_LOGI(TAG, "Trying to send image...");
             camera_fb_t *fb = esp_camera_fb_get();
-            ep_send_img(fb->buf, fb->len);
+            int e = ep_send_img(fb->buf, fb->len);
+            if (e != 0) {
+                ESP_LOGW(TAG, "Sending image failed with error: %i", e);
+            }
             esp_camera_fb_return(fb);
         }
         // todo we will need to consider, that sending of the image may take quite a few milliseconds
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+    }
+
+    cam_error:
+    while (1) {
+        ESP_LOGI(TAG, "Cam Error: 0x%x", err);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
 }
@@ -260,14 +375,12 @@ static esp_netif_t *s_example_esp_netif;
  * All netifs created withing common connect component are prefixed with the module TAG,
  * so it returns true if the specified netif is owned by this module
  */
-static bool is_our_netif(const char *prefix, esp_netif_t *netif)
-{
+static bool is_our_netif(const char *prefix, esp_netif_t *netif) {
     return strncmp(prefix, esp_netif_get_desc(netif), strlen(prefix) - 1) == 0;
 }
 
 static void on_wifi_disconnect(void *arg, esp_event_base_t event_base,
-                               int32_t event_id, void *event_data)
-{
+                               int32_t event_id, void *event_data) {
     ESP_LOGI(TAG, "Wi-Fi disconnected, trying to reconnect...");
     esp_err_t err = esp_wifi_connect();
     if (err == ESP_ERR_WIFI_NOT_STARTED) {
@@ -277,20 +390,19 @@ static void on_wifi_disconnect(void *arg, esp_event_base_t event_base,
 }
 
 static void on_got_ip(void *arg, esp_event_base_t event_base,
-                      int32_t event_id, void *event_data)
-{
-    ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
+                      int32_t event_id, void *event_data) {
+    ip_event_got_ip_t *event = (ip_event_got_ip_t *) event_data;
     if (!is_our_netif(TAG, event->esp_netif)) {
         ESP_LOGW(TAG, "Got IPv4 from another interface \"%s\": ignored", esp_netif_get_desc(event->esp_netif));
         return;
     }
-    ESP_LOGI(TAG, "Got IPv4 event: Interface \"%s\" address: " IPSTR, esp_netif_get_desc(event->esp_netif), IP2STR(&event->ip_info.ip));
+    ESP_LOGI(TAG, "Got IPv4 event: Interface \"%s\" address: "
+    IPSTR, esp_netif_get_desc(event->esp_netif), IP2STR(&event->ip_info.ip));
     memcpy(&s_ip_addr, &event->ip_info.ip, sizeof(s_ip_addr));
     xSemaphoreGive(s_semph_get_ip_addr);
 }
 
-static esp_netif_t *wifi_start(void)
-{
+static esp_netif_t *wifi_start(void) {
     char *desc;
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -323,8 +435,7 @@ static esp_netif_t *wifi_start(void)
     return netif;
 }
 
-esp_netif_t *get_example_netif_from_desc(const char *desc)
-{
+esp_netif_t *get_example_netif_from_desc(const char *desc) {
     esp_netif_t *netif = NULL;
     char *expected_desc;
     asprintf(&expected_desc, "%s: %s", TAG, desc);
@@ -338,8 +449,7 @@ esp_netif_t *get_example_netif_from_desc(const char *desc)
     return netif;
 }
 
-static void wifi_stop(void)
-{
+static void wifi_stop(void) {
     esp_netif_t *wifi_netif = get_example_netif_from_desc("sta");
     ESP_ERROR_CHECK(esp_event_handler_unregister(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &on_wifi_disconnect));
     ESP_ERROR_CHECK(esp_event_handler_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, &on_got_ip));
@@ -354,8 +464,7 @@ static void wifi_stop(void)
     s_example_esp_netif = NULL;
 }
 
-esp_err_t wifi_connect(void)
-{
+esp_err_t wifi_connect(void) {
     if (s_semph_get_ip_addr != NULL) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -373,7 +482,8 @@ esp_err_t wifi_connect(void)
             ESP_LOGI(TAG, "Connected to %s", esp_netif_get_desc(netif));
             ESP_ERROR_CHECK(esp_netif_get_ip_info(netif, &ip));
 
-            ESP_LOGI(TAG, "- IPv4 address: " IPSTR, IP2STR(&ip.ip));
+            ESP_LOGI(TAG, "- IPv4 address: "
+            IPSTR, IP2STR(&ip.ip));
         }
     }
     return ESP_OK;
@@ -395,10 +505,9 @@ void app_main(void) {
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(wifi_connect());
-
     esp_wifi_set_ps(WIFI_PS_NONE);
 
-    xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, NULL);
+    ESP_LOGI(TAG, "WiFi connection successful");
+
     xTaskCreate(&eyeotine_task, "eyeotine_task", 8192, NULL, 5, NULL);
-    xTaskCreate(&eyeotine_camera_task, "eyeotine_camera_task", 8192, NULL, 4, NULL);
 }

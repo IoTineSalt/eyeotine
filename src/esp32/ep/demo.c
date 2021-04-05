@@ -47,7 +47,7 @@ void stop(int signum) {
 }
 
 void reassociate() {
-    camera_state = false;
+    camera_state = false;<
     ep_associate();
 }
 

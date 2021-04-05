@@ -33,6 +33,7 @@ struct ep {
     void (*on_disconnect)();
     bool (*on_recv_config)(void *, size_t);
     void (*on_recv_restart)();
+    void (*on_recv_ota)();
 };
 
 // Internal declarations
@@ -78,7 +79,20 @@ void ep_stop() {
 #if EP_LOG_LEVEL >= 4
     ep.log("[DBG]  ep_stop() called");
 #endif
-    // todo handle termination, eg. send disconnect packet
+    struct ep_mgmt_dassoc *packet = (struct ep_mgmt_dassoc *) ep.buffer;
+    struct ep_header *header = (struct ep_header *) packet;
+
+    EP_SET_VERSION(header, 0);
+    EP_SET_TYPE(header, EP_TYPE_MGMT);
+    EP_SET_SUBTYPE(header, EP_SUBTYPE_MGMT_DASSOC);
+
+    ep.send_udp(packet, sizeof(struct ep_mgmt_dassoc));
+    ep.time_last_tx = ep.milliclk();
+
+#if EP_LOG_LEVEL >= 3
+    ep.log("[INFO] disassociated");
+#endif
+
     EP_SET_STATE(STOPPED);
 }
 
@@ -221,6 +235,14 @@ void ep_set_recv_restart_cb(void (*on_recv_restart)()) {
     ep.on_recv_restart = on_recv_restart;
 }
 
+void ep_set_ota_cb(void (*on_recv_ota)()) {
+#if EP_LOG_LEVEL >= 4
+    sprintf(ep.log_buffer, "[DBG]  ep_recv_restart_cb(%p) called", on_recv_restart);
+    ep.log(ep.log_buffer);
+#endif
+    ep.on_recv_ota = on_recv_ota;
+}
+
 // Internal method definitions
 static bool recv(void *buf, size_t len) {
     // Minimum length of the header is 1
@@ -294,6 +316,21 @@ static bool recv(void *buf, size_t len) {
             // Discard all packets except for mgmt and ctrl frames
             EP_INFO_DISCARD("wait for sync/camera {on,off}");
             return false;
+        }
+
+        if (EP_GET_TYPE(eph) == EP_TYPE_CTRL && EP_GET_SUBTYPE(eph) == EP_SUBTYPE_CTRL_OTA) {
+            if (len < sizeof(struct ep_ctrl_ota)) {
+                EP_WARN_MISMATCH("truncated ota frame", "%u", sizeof(struct ep_ctrl_ota), "%u", len);
+                return false;
+            }
+#if EP_LOG_LEVEL >= 3
+            ep.log("[INFO] received ota");
+
+            if (ep.on_recv_ota)
+                ep.on_recv_ota();
+
+            return true;
+#endif
         }
 
         if (EP_GET_TYPE(eph) == EP_TYPE_CTRL && EP_GET_SUBTYPE(eph) == EP_SUBTYPE_CTRL_SYNC) {
