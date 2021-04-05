@@ -164,6 +164,9 @@ class Esp:
             if get_type(header) == Types.TYPE_DATA:
                 if get_subtype(header) == SubtypeData.SUBTYPE_DATA_IMAGE:
                     self.data_queue.put(data[1:])
+            if get_type(header) == Types.TYPE_MGMT:
+                if get_subtype(header) == SubtypeMgmt.SUBTYPE_MGMT_DASSOC:
+                    esp_list.remove(self)
 
     def ping(self):
         if self.timestamp - self.last_send_package_timestamp >= 1000:
