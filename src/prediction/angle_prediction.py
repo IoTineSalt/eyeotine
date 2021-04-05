@@ -56,7 +56,11 @@ while True:
         continue
 
     p.feed(base64.b64decode(data['data']))
-    im = p.close()
+    try:
+        im = p.close()
+    except OSError:
+        logging.error("the image format is not correct")
+        continue
     im.filename='dummyfilename'
 
     ###Prediction###
