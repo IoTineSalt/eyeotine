@@ -22,12 +22,16 @@ class FileServer(BaseHTTPRequestHandler):
 
     def do_GET(self):
         global payload
-        self.send_response(200)
-        self.send_header('Content-type', 'application/otafirmware')
-        self.send_header('Content-Disposition', 'attachment; filename="ota.firm"')
-        self.end_headers()
         logging.info("get request")
-        self.wfile.write(payload)
+        if payload!=None:
+            self.send_response(200)
+            self.send_header('Content-type', 'application/otafirmware')
+            self.send_header('Content-Disposition', 'attachment; filename="ota.firm"')
+            self.end_headers()
+            self.wfile.write(payload)
+        else:
+            logging.info("no payload found")
+            self.send_response(404)
 
 mqtt_client = Client()
 mqtt_client.on_connect = on_connect
