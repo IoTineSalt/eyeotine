@@ -51,6 +51,8 @@ while True:
     try:
         topic, data = mqtt_msg_queue.get()
         data = json.loads(data)
+    except KeyboardInterrupt:
+        exit(1)
     except:
         continue
     p = ImageFile.Parser()
