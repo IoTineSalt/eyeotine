@@ -47,14 +47,13 @@ mqtt_client.loop_start()
 mqtt_client.subscribe(("server/images/data", 2))
 logging.info("Subscribed")
 
-p = ImageFile.Parser()
 while True:
     try:
         topic, data = mqtt_msg_queue.get()
         data = json.loads(data)
     except:
         continue
-
+    p = ImageFile.Parser()
     p.feed(base64.b64decode(data['data']))
     try:
         im = p.close()
