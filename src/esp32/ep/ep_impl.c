@@ -89,6 +89,9 @@ void ep_stop() {
     ep.send_udp(packet, sizeof(struct ep_mgmt_dassoc));
     ep.time_last_tx = ep.milliclk();
 
+    if (ep.on_disconnect)
+        ep.on_disconnect();
+
 #if EP_LOG_LEVEL >= 3
     ep.log("[INFO] disassociated");
 #endif
