@@ -50,7 +50,7 @@ logging.info("Subscribed")
 p = ImageFile.Parser()
 while True:
     try:
-        topic, data = mqtt_msg_queue.get(2)
+        topic, data = mqtt_msg_queue.get()
         data = json.loads(data)
     except:
         continue
@@ -68,7 +68,7 @@ while True:
     results = yolov5.predict(im)
     logging.info("predicted" + ' at '+ str(data['timestamp']) + ' from ' +\
       str(data['source_ipaddr']))
-
+    logging.info(str(results.xywhn[0]))
     centers = [np.array([float(x[0]), float(x[1])]) for x in results.xywhn[0] if x[5]==0]
     # print("centers", centers)
 
