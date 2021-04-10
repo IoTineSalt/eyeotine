@@ -47,14 +47,15 @@ mqtt_client.loop_start()
 mqtt_client.subscribe(("server/images/data", 2))
 logging.info("Subscribed")
 
-p = ImageFile.Parser()
 while True:
     try:
         topic, data = mqtt_msg_queue.get()
         data = json.loads(data)
+    except KeyboardInterrupt:
+        exit(1)
     except:
         continue
-
+    p = ImageFile.Parser()
     p.feed(base64.b64decode(data['data']))
     try:
         im = p.close()
@@ -72,7 +73,7 @@ while True:
     centers = [np.array([float(x[0]), float(x[1])]) for x in results.xywhn[0] if x[5]==0]
     # print("centers", centers)
 
-    fov = 80
+    fov = 60
     angles = [center[0]*fov-(fov/2) for center in centers]
     logging.info("calculated angles" +  str(angles))
     msg = {}
