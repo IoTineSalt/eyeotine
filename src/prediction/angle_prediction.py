@@ -73,7 +73,7 @@ while True:
     centers = [np.array([float(x[0]), float(x[1])]) for x in results.xywhn[0] if x[5]==0]
     # print("centers", centers)
 
-    fov = 80
+    fov = 60
     angles = [center[0]*fov-(fov/2) for center in centers]
     logging.info("calculated angles" +  str(angles))
     msg = {}
